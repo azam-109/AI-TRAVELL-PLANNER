@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String          @unique @db.VarChar(255)
+  passwordHash String          @map("password_hash") @db.VarChar(255)
+  name         String          @db.VarChar(100)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+  sessions     TravelSession[]
+
+  @@map("users")
+}
+
+model TravelSession {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String      @map("user_id") @db.Uuid
+  title         String      @db.VarChar(255)
+  userQuery     String      @map("user_query") @db.Text
+  flightResults String?     @map("flight_results") @db.Text
+  hotelResults  String?     @map("hotel_results") @db.Text
+  itinerary     String?     @db.Text
+  finalResponse String?     @map("final_response") @db.Text
+  llmCalls      Int         @default(0) @map("llm_calls")
+  status        String      @default("pending") @db.VarChar(20)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  completedAt   DateTime?   @map("completed_at") @db.Timestamptz()
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentLogs     AgentLog[]
+
+  @@map("travel_sessions")
+}
+
+model AgentLog {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId   String        @map("session_id") @db.Uuid
+  agentName   String        @map("agent_name") @db.VarChar(50)
+  inputData   Json?         @map("input_data")
+  outputData  Json?         @map("output_data")
+  durationMs  Int?          @map("duration_ms")
+  error       String?       @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  session     TravelSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("agent_logs")
+}
